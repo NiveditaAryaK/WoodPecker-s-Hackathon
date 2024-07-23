@@ -62,7 +62,7 @@ def main():
             plot_sales(axs[1, 0], 'Loaders (Wheeled)', df, 'red')
             plot_sales(axs[1, 1], 'Skid Steer Loaders', df, 'purple')
             plot_sales(axs[2, 0], 'Compactors', df, 'orange')
-            plot_sales(axs[2, 1], 'Tele_Handlers', df, 'brown')
+            plot_sales(axs[2, 1], 'Tele_Handlers ', df, 'brown')
 
             plt.tight_layout()
             st.pyplot(fig)
@@ -111,7 +111,7 @@ def main():
             plot_arima_forecast(df[df['Model'] == 'Loaders (Wheeled)'], 'Loaders', axs[1, 0])
             plot_arima_forecast(df[df['Model'] == 'Skid Steer Loaders'], 'Skid Steer Loaders', axs[1, 1])
             plot_arima_forecast(df[df['Model'] == 'Compactors'], 'Compactors', axs[2, 0])
-            plot_arima_forecast(df[df['Model'] == 'Tele_Handlers'], 'Tele_Handlers', axs[2, 1])
+            plot_arima_forecast(df[df['Model'] == 'Tele_Handlers '], 'Tele_Handlers ', axs[2, 1])
 
             plt.tight_layout()
             st.pyplot(fig)
