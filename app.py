@@ -4,6 +4,26 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.stattools import adfuller
+import numpy as np
+
+
+def select_arima_order(series, max_p=2, max_q=2, alpha=0.05):
+    """Pick (p, d, q) via an ADF stationarity test for d and an AIC grid search for p, q."""
+    d = 0 if adfuller(series.dropna())[1] < alpha else 1
+
+    best_order, best_aic = (1, d, 1), np.inf
+    for p in range(max_p + 1):
+        for q in range(max_q + 1):
+            if p == 0 and q == 0:
+                continue
+            try:
+                aic = ARIMA(series, order=(p, d, q)).fit().aic
+            except Exception:
+                continue
+            if aic < best_aic:
+                best_order, best_aic = (p, d, q), aic
+    return best_order
 
 st.title('Demand Forecasting and ABC Analysis App')
 
@@ -27,8 +47,12 @@ if univariant_file and multivariant_file and raw_material_file and input_file:
     jp = pd.read_excel(input_file)
 
     # Data Preparation
-    C = jp[["Value","Month","Monthpercent","Day","percent","Market_Share","political","Marketing","Budget"]]
-    X = data[["Value","Month","Monthpercent","Day","percent","Market_Share","political","Marketing","Budget"]]
+    # Note: Market_Share and political are constant across every row in this
+    # dataset, so they carry zero predictive signal (confirmed via feature
+    # importances) — dropped rather than left in as dead weight.
+    rf_features = ["Value", "Month", "Monthpercent", "Day", "percent", "Marketing", "Budget"]
+    C = jp[rf_features]
+    X = data[rf_features]
     y = data["Daily_Sales_Quantity"]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     rf_regressor = RandomForestRegressor(n_estimators=100, random_state=42)
@@ -46,14 +70,15 @@ if univariant_file and multivariant_file and raw_material_file and input_file:
             return pd.DataFrame()  # Return an empty DataFrame if no data
 
         df = df.groupby('Date').sum()
-        model = ARIMA(df['Daily_Sales_Quantity'], order=(1, 1, 1))
+        order = select_arima_order(df['Daily_Sales_Quantity'])
+        model = ARIMA(df['Daily_Sales_Quantity'], order=order)
         model_fit = model.fit()
         forecast_steps = int(len(jp)/6)
         forecast = model_fit.forecast(steps=forecast_steps)
         forecast_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=forecast_steps, freq='D')
         ax.plot(df.index, df['Daily_Sales_Quantity'], label='Original')
         ax.plot(forecast_dates, forecast, label='Forecast')
-        ax.set_title(model_name)
+        ax.set_title(f'{model_name} {order}')
         ax.legend()
         return pd.DataFrame({'Date': forecast_dates, 'Model': model_name, 'Forecast': forecast})
 
@@ -140,14 +165,15 @@ if univariant_file and multivariant_file and raw_material_file and input_file:
             return pd.DataFrame()  # Return an empty DataFrame if no data
 
         df = df.groupby('Date').sum()
-        model = ARIMA(df['Daily_Sales_Quantity'], order=(1, 1, 1))
+        order = select_arima_order(df['Daily_Sales_Quantity'])
+        model = ARIMA(df['Daily_Sales_Quantity'], order=order)
         model_fit = model.fit()
         forecast_steps = int(len(jp)/6)
         forecast = model_fit.forecast(steps=forecast_steps)
         forecast_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=forecast_steps, freq='D')
         ax.plot(df.index, df['Daily_Sales_Quantity'], label='Original')
         ax.plot(forecast_dates, forecast, label='Forecast')
-        ax.set_title(model_name)
+        ax.set_title(f'{model_name} {order}')
         ax.legend()
         return pd.DataFrame({'Date': forecast_dates, 'Model': model_name, 'Forecast': forecast})
 
